@@ -1,0 +1,3 @@
+/home/jesse/Documents/GitHub/video-pipeline-vulkan/build/CMakeFiles/vpv.dir
+/home/jesse/Documents/GitHub/video-pipeline-vulkan/build/CMakeFiles/edit_cache.dir
+/home/jesse/Documents/GitHub/video-pipeline-vulkan/build/CMakeFiles/rebuild_cache.dir
