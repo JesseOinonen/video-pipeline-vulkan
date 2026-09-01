@@ -2,8 +2,26 @@
 #include <iostream>
 #include <vector>
 #include <stdexcept>
+#include <cstring>
 
 int main() {
+
+    ////////////////////////
+    // Validation layer
+    uint32_t layerCount = 0;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+    const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
+    bool validationAvailable = false;
+    for (const auto& layer : availableLayers) {
+        std::cout << "  - " << layer.layerName << " : " << layer.description << "\n";
+        if (std::strcmp(layer.layerName, validationLayerName) == 0) {validationAvailable = true;}
+    }
+
+    ////////////////////////
     // Instance
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -13,10 +31,15 @@ int main() {
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
+    if (validationAvailable) {
+        createInfo.enabledLayerCount = 1;
+        createInfo.ppEnabledLayerNames = &validationLayerName;
+    }
 
     VkInstance instance;
     if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {throw std::runtime_error("Vulkan instance failed");}
 
+    ////////////////////////
     // Physical devices
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -28,7 +51,7 @@ int main() {
     std::cout <<"Found devices:\n";
     VkPhysicalDevice chosen = VK_NULL_HANDLE;
     VkPhysicalDevice fallback = VK_NULL_HANDLE;
-    for (auto& dev : devices) {
+    for (const auto& dev : devices) {
         VkPhysicalDeviceProperties props;
         vkGetPhysicalDeviceProperties(dev, &props);
         std::cout << "  - " << props.deviceName
@@ -85,8 +108,6 @@ int main() {
     deviceCreateInfo.queueCreateInfoCount = 1;
     deviceCreateInfo.pEnabledFeatures     = nullptr;
 
-    //////////////////////////
-    // Create device
     VkDevice device = VK_NULL_HANDLE;
 
     if (vkCreateDevice(chosen, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS) {throw std::runtime_error("Vulkan device failed");}
@@ -96,8 +117,32 @@ int main() {
     VkQueue computeQueue = VK_NULL_HANDLE;
     vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
 
+    //////////////////////////
+    // Command pool
+    VkCommandPoolCreateInfo poolCreateInfo{};
+    poolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolCreateInfo.queueFamilyIndex = computeFamily;
+    poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    VkCommandPool commandPool = VK_NULL_HANDLE;
+
+    if (vkCreateCommandPool(device, &poolCreateInfo, nullptr, &commandPool) != VK_SUCCESS) {throw std::runtime_error("Failed to create command pool");}
+
+    //////////////////////////
+    // Command buffer (allocated not created)
+    VkCommandBufferAllocateInfo cmdAllocInfo{};
+    cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdAllocInfo.commandPool = commandPool;
+    cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdAllocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+
+    if (vkAllocateCommandBuffers(device, &cmdAllocInfo, &commandBuffer) != VK_SUCCESS) {throw std::runtime_error("Failed to allocate command buffer");}
+
     ////////////////////////
-    // Destroy
+    // Destroy/clean up
+    vkDestroyCommandPool(device, commandPool, nullptr);
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
 

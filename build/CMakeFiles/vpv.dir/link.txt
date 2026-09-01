@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/vpv.dir/src/main.cpp.o -o vpv  /usr/lib/x86_64-linux-gnu/libvulkan.so 
