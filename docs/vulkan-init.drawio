@@ -1,0 +1,66 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Stage 1 - init" id="stage1">
+    <mxGraphModel dx="900" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Vulkan stage 1: instance -&gt; device -&gt; compute queue" style="text;html=1;fontSize=16;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n1" value="&lt;b&gt;VkInstance&lt;/b&gt;&lt;br&gt;vkCreateInstance()&lt;br&gt;&lt;i&gt;connection to the loader&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="&lt;b&gt;VkPhysicalDevice&lt;/b&gt;&lt;br&gt;vkEnumeratePhysicalDevices() + pick&lt;br&gt;&lt;i&gt;description of installed hardware&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="&lt;b&gt;queue family index&lt;/b&gt; (uint32_t)&lt;br&gt;vkGetPhysicalDeviceQueueFamilyProperties()&lt;br&gt;&lt;i&gt;which engine group runs compute&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;VkDevice&lt;/b&gt;&lt;br&gt;vkCreateDevice()&lt;br&gt;&lt;i&gt;open session with the chosen GPU&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;VkQueue&lt;/b&gt;&lt;br&gt;vkGetDeviceQueue()&lt;br&gt;&lt;i&gt;channel that work is submitted to&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="510" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="VkCommandPool -&gt; VkCommandBuffer&lt;br&gt;&lt;i&gt;next stage&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#999999;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="630" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n3" target="n4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n4" target="n5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;dashed=1;strokeColor=#999999;" edge="1" parent="1" source="n5" target="n6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend" value="&lt;b&gt;blue = created&lt;/b&gt; (vkCreate*), must be destroyed&lt;br&gt;&lt;b&gt;green = retrieved&lt;/b&gt; (vkGet*/vkEnumerate*), never destroyed" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f5f5f5;strokeColor=#b3b3b3;" vertex="1" parent="1">
+          <mxGeometry x="400" y="70" width="330" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pA" value="&lt;b&gt;Pattern A - create&lt;/b&gt;&lt;br&gt;1. VkXCreateInfo info{};&lt;br&gt;2. info.sType = VK_STRUCTURE_TYPE_X&lt;br&gt;3. fill fields (small infos nest into big ones)&lt;br&gt;4. vkCreateX(parent, &amp;amp;info, nullptr, &amp;amp;out)&lt;br&gt;5. check == VK_SUCCESS&lt;br&gt;&lt;i&gt;used by: VkInstance, VkDevice, and everything after&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="400" y="180" width="330" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pB" value="&lt;b&gt;Pattern B - enumerate&lt;/b&gt;&lt;br&gt;1. call with count ptr + nullptr for data&lt;br&gt;2. size a std::vector to the count&lt;br&gt;3. call again with vector.data()&lt;br&gt;&lt;i&gt;used by: physical devices, queue families&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="400" y="360" width="330" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="td" value="&lt;b&gt;Teardown = reverse of creation&lt;/b&gt;&lt;br&gt;&lt;br&gt;vkDestroyDevice(device)&lt;br&gt;vkDestroyInstance(instance)&lt;br&gt;&lt;br&gt;&lt;i&gt;VkPhysicalDevice and VkQueue are missing on&lt;br&gt;purpose: they were never created, so they are&lt;br&gt;never destroyed. Children before parents.&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="400" y="510" width="330" height="150" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
