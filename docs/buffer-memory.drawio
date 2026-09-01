@@ -1,0 +1,76 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Stage 2 - buffers and memory" id="stage2">
+    <mxGraphModel dx="900" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Vulkan stage 2: buffers and memory" style="text;html=1;fontSize=16;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s1" value="&lt;b&gt;1. vkCreateBuffer&lt;/b&gt;&lt;br&gt;VkBufferCreateInfo: size, usage,&lt;br&gt;sharingMode = EXCLUSIVE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="310" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="&lt;b&gt;2. vkGetBufferMemoryRequirements&lt;/b&gt;&lt;br&gt;size (may exceed what you asked for),&lt;br&gt;alignment, memoryTypeBits" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="160" width="310" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="&lt;b&gt;3. findMemoryType&lt;/b&gt;(memoryTypeBits, properties)&lt;br&gt;two bit tests -&gt; a type index" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="310" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="&lt;b&gt;4. vkAllocateMemory&lt;/b&gt;&lt;br&gt;allocationSize = memRequirements.size&lt;br&gt;memoryTypeIndex = step 3" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="340" width="310" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" value="&lt;b&gt;5. vkBindBufferMemory&lt;/b&gt;(dev, buf, mem, &lt;b&gt;0&lt;/b&gt;)&lt;br&gt;&lt;i&gt;the 0 is an offset - the API is shaped&lt;br&gt;for sub-allocating many buffers in one block&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="430" width="310" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="s1" target="s2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="s2" target="s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="s3" target="s4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="s4" target="s5"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="c1" value="&lt;b&gt;VkBuffer&lt;/b&gt;&lt;br&gt;a description:&lt;br&gt;size + usage&lt;br&gt;&lt;i&gt;zero bytes of storage&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="400" y="70" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="c2" value="&lt;b&gt;VkDeviceMemory&lt;/b&gt;&lt;br&gt;the actual&lt;br&gt;allocation" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="630" y="70" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ec" value="vkBindBufferMemory" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="c1" target="c2"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="t1" value="&lt;b&gt;Test 1 - is type i allowed?&lt;/b&gt;&lt;br&gt;typeFilter &amp;amp; (1u &amp;lt;&amp;lt; i)&lt;br&gt;&lt;i&gt;typeFilter comes from memoryTypeBits:&lt;br&gt;bit i means &quot;type i fits this buffer&quot;.&lt;br&gt;1u, not 1 - 1 &amp;lt;&amp;lt; 31 on signed int is UB.&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="400" y="190" width="410" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="&lt;b&gt;Test 2 - are ALL requested flags present?&lt;/b&gt;&lt;br&gt;(propertyFlags &amp;amp; properties) == properties&lt;br&gt;&lt;i&gt;== is right here because several bits are tested&lt;br&gt;at once. On queueFlags, == was wrong and plain &amp;amp;&lt;br&gt;was right, because that tested ONE bit.&lt;br&gt;Match the test to the question.&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="400" y="310" width="410" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mm" value="&lt;b&gt;RTX 3060 memory map (observed)&lt;/b&gt;&lt;br&gt;heap 0 = 12288 MiB DEVICE_LOCAL (VRAM)&lt;br&gt;heap 1 = 14838 MiB (system memory)&lt;br&gt;heap 2 = 246 MiB DEVICE_LOCAL (BAR window)&lt;br&gt;&lt;br&gt;type 1 -&gt; heap 0, flags 1 (DEVICE_LOCAL)&lt;br&gt;type 3 -&gt; heap 1, flags 6 (HOST_VISIBLE|COHERENT)&lt;br&gt;type 5 -&gt; heap 2, flags 7 (both)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f5f5f5;strokeColor=#b3b3b3;" vertex="1" parent="1">
+          <mxGeometry x="400" y="450" width="410" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dpTitle" value="&lt;b&gt;Data path (round trip test)&lt;/b&gt;" style="text;html=1;fontSize=13;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="630" width="400" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d1" value="&lt;b&gt;stagingIn&lt;/b&gt;&lt;br&gt;TRANSFER_SRC&lt;br&gt;type 3, heap 1&lt;br&gt;&lt;i&gt;system memory&lt;br&gt;filled via vkMapMemory&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="660" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" value="&lt;b&gt;deviceBuffer&lt;/b&gt;&lt;br&gt;TRANSFER_DST|SRC|STORAGE&lt;br&gt;type 1, heap 0&lt;br&gt;&lt;i&gt;VRAM - the shader will&lt;br&gt;read and write this one&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="310" y="660" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="d3" value="&lt;b&gt;stagingOut&lt;/b&gt;&lt;br&gt;TRANSFER_DST&lt;br&gt;type 3, heap 1&lt;br&gt;&lt;i&gt;system memory&lt;br&gt;read back and compared&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="580" y="660" width="220" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ed1" value="vkCmdCopyBuffer" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="d1" target="d2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ed2" value="vkCmdCopyBuffer" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="d2" target="d3"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="bar" value="&lt;b&gt;A pipeline barrier is required between the two copies.&lt;/b&gt; Commands in a command buffer are only guaranteed to &lt;i&gt;start&lt;/i&gt; in order, so without it the second copy may read stale data. Same problem as a handshake between RTL pipeline stages - the difference is that here it is declared to the driver rather than built as structure. The validation layer does NOT check synchronisation by default, so silence does not prove the barriers are right." style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="790" width="760" height="90" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

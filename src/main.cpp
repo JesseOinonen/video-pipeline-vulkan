@@ -4,6 +4,60 @@
 #include <stdexcept>
 #include <cstring>
 
+uint32_t findMemoryType (VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties){
+    VkPhysicalDeviceMemoryProperties memProps;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
+
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
+        bool typeAllowed   = (typeFilter & (1u << i)) != 0;
+        bool hasProperties = (memProps.memoryTypes[i].propertyFlags & properties) == properties; 
+
+        if (typeAllowed && hasProperties) {
+            return i;
+        }
+    }
+    throw std::runtime_error("No suitable memory type found");
+}
+
+void createBuffer(VkDevice device, 
+                  VkPhysicalDevice physicalDevice, 
+                  VkDeviceSize size, 
+                  VkBufferUsageFlags usage, 
+                  VkMemoryPropertyFlags properties, 
+                  VkBuffer& buffer, 
+                  VkDeviceMemory& memory) {
+    // The description
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size        = size;
+    bufferInfo.usage       = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {throw std::runtime_error("Failed to create buffer");}
+
+    // what the driver actually needs
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+    // pick a type, allocate
+    VkMemoryAllocateInfo memAllocInfo{};
+    memAllocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAllocInfo.allocationSize  = memRequirements.size;
+    memAllocInfo.memoryTypeIndex = findMemoryType(physicalDevice,
+                                                  memRequirements.memoryTypeBits,
+                                                  properties);
+
+    std::cout << "  buffer: requested " << size
+              << " B, driver wants " << memRequirements.size
+              << " B, alignment " << memRequirements.alignment
+              << ", memory type " << memAllocInfo.memoryTypeIndex << "\n";
+
+    if (vkAllocateMemory(device, &memAllocInfo, nullptr, &memory) != VK_SUCCESS) {throw std::runtime_error("Failed to allocate buffer memory");}
+
+    // tie them together
+    vkBindBufferMemory(device, buffer, memory, 0);
+}
+
 int main() {
 
     ////////////////////////
@@ -141,7 +195,88 @@ int main() {
     if (vkAllocateCommandBuffers(device, &cmdAllocInfo, &commandBuffer) != VK_SUCCESS) {throw std::runtime_error("Failed to allocate command buffer");}
 
     ////////////////////////
+    // Buffers an memory
+
+    // Fetch the whole memory map
+    VkPhysicalDeviceMemoryProperties memProps;
+    vkGetPhysicalDeviceMemoryProperties(chosen, &memProps);
+
+    std::cout << "\nMemory heaps: " << memProps.memoryHeapCount << "\n";
+    for (uint32_t i = 0; i < memProps.memoryHeapCount; i++){
+        std::cout << " - Heap " << i << ": "
+                  << (memProps.memoryHeaps[i].size / (1024 * 1024)) << " MiB"
+                  << ", flags=" << memProps.memoryHeaps[i].flags << "\n";
+    }
+
+    std::cout << "\nMemory types: " << memProps.memoryTypeCount << "\n";
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++){
+        std::cout << " - Type " << i
+                  << ": heap=" << memProps.memoryTypes[i].heapIndex
+                  << ", flags=" << memProps.memoryTypes[i].propertyFlags << "\n";
+    }
+
+    // Find memory type
+    std::cout << "\nfindMemoryType checks:\n";
+    std::cout << "  HOST_VISIBLE|HOST_COHERENT -> type "
+              << findMemoryType(chosen, UINT32_MAX,
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) << "\n";
+    std::cout << "  DEVICE_LOCAL               -> type "
+              << findMemoryType(chosen, UINT32_MAX,
+                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) << "\n";
+    std::cout << "  DEVICE_LOCAL|HOST_VISIBLE  -> type "
+              << findMemoryType(chosen, UINT32_MAX,
+                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) << "\n";
+
+    //////////////////////////
+    // Buffers
+    const VkDeviceSize bufferSize = 1280 * 720 * sizeof(uint16_t);
+    std::cout << "\nAllocating buffers (" << bufferSize << " B each):\n";
+
+    VkBuffer       stagingIn       = VK_NULL_HANDLE;
+    VkDeviceMemory stagingInMemory = VK_NULL_HANDLE;
+    createBuffer(device, chosen, bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingIn, stagingInMemory);
+
+    VkBuffer       deviceBuffer       = VK_NULL_HANDLE;
+    VkDeviceMemory deviceBufferMemory = VK_NULL_HANDLE;
+    createBuffer(device, chosen, bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                 deviceBuffer, deviceBufferMemory);
+
+    VkBuffer       stagingOut       = VK_NULL_HANDLE;
+    VkDeviceMemory stagingOutMemory = VK_NULL_HANDLE;
+    createBuffer(device, chosen, bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingOut, stagingOutMemory);
+
+    void* data = nullptr;
+    vkMapMemory(device, stagingInMemory, 0, bufferSize, 0, &data);
+    uint16_t* pixels = static_cast<uint16_t*>(data);
+    for (size_t i = 0; i < 1280 * 720; i++) {
+        pixels[i] = static_cast<uint16_t>(i & 0xFFFF);
+    }
+    vkUnmapMemory(device, stagingInMemory);
+    std::cout << "Filled stagingIn with a test pattern.\n";
+
+
+    ////////////////////////
     // Destroy/clean up
+    vkDestroyBuffer(device, stagingOut, nullptr);
+    vkFreeMemory(device, stagingOutMemory, nullptr);
+    vkDestroyBuffer(device, deviceBuffer, nullptr);
+    vkFreeMemory(device, deviceBufferMemory, nullptr);
+    vkDestroyBuffer(device, stagingIn, nullptr);
+    vkFreeMemory(device, stagingInMemory, nullptr);
     vkDestroyCommandPool(device, commandPool, nullptr);
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);

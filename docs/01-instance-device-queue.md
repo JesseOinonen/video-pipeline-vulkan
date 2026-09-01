@@ -173,12 +173,30 @@ vendor: the code queries properties and reacts to what it finds.
 
 | | Iris Xe (laptop, dev) | RTX 3060 (benchmarks) |
 |---|---|---|
-| queue families | 1 | expected several |
-| family 0 | `flags=31`, 1 queue | universal, many queues |
-| others | — | compute-only, transfer-only, video (to confirm) |
+| queue families | 1 | 6 |
+| picked by the code | family 0 | family 0 |
 
-To fill in the right-hand column, just run the current binary on the 3060 — it
-already prints every family with its queue count and flags.
+Iris Xe reports a single universal family: `flags=31` (graphics, compute,
+transfer, sparse, protected), 1 queue.
+
+The 3060 exposes each hardware engine as its own family:
+
+| family | queues | flags | decoded |
+|---|---|---|---|
+| 0 | 16 | 15 | graphics + compute + transfer + sparse — universal |
+| 1 | 2 | 12 | transfer + sparse — copy DMA, no compute |
+| 2 | 8 | 14 | compute + transfer + sparse — async compute, no graphics |
+| 3 | 1 | 44 | video decode + transfer + sparse |
+| 4 | 1 | 76 | video encode + transfer + sparse |
+| 5 | 1 | 268 | optical flow (NV) + transfer + sparse |
+
+Bits not seen on the laptop: `VK_QUEUE_VIDEO_DECODE_BIT_KHR` = 32,
+`VK_QUEUE_VIDEO_ENCODE_BIT_KHR` = 64, `VK_QUEUE_OPTICAL_FLOW_BIT_NV` = 256.
+
+"First family with `COMPUTE_BIT`" picks family 0 on both machines, which is
+correct and portable. Worth trying at benchmark time: family 2 is a dedicated
+compute engine with no graphics work competing for it — same code, one changed
+index.
 
 `llvmpipe` also shows up on the laptop as `deviceType = 4` (CPU). Selection
 ignores it, and it is **not** the CPU leg of the FPGA/CPU/GPU comparison — that
@@ -187,13 +205,4 @@ rasteriser.
 
 ## Next
 
-1. buffer + memory: `vkCreateBuffer` -> `vkGetBufferMemoryRequirements` ->
-   pick a memory type -> `vkAllocateMemory` -> `vkBindBufferMemory`.
-   Two buffers, staging (host-visible) and device-local, written the discrete way
-   from the start so the 3060 numbers mean something.
-2. first submission with **no shader**: record `vkCmdCopyBuffer`, submit, wait on
-   a fence, map and verify the bytes survived. This exercises the whole
-   record/submit/synchronise path in isolation, before shaders can confuse the
-   diagnosis.
-3. split `main.cpp` into a context struct + helpers, once the copy test passes.
-4. first compute shader: grayscale.
+Continues in [Stage 2 — Buffers and memory](02-buffers-and-memory.md).
