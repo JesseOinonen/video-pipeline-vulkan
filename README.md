@@ -7,7 +7,7 @@ architectures**: FPGA, CPU and GPU.
 The RTL version lives in a separate repo
 ([video-pipeline](https://github.com/JesseOinonen/video-pipeline)) and is a
 streaming AXI-Stream design — ROI → grayscale → Gaussian → Sobel, one pixel per
-clock at 125 MHz. This repo is the GPU-compute port of the same filters, and the
+clock at 188 MHz. This repo is the GPU-compute port of the same filters, and the
 two are validated against a shared golden model so the comparison is between
 architectures rather than between implementations that happen to disagree.
 
