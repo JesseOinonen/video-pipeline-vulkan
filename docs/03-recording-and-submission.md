@@ -181,12 +181,6 @@ all.
 
 ## Next
 
-1. **Split `main.cpp`** — 345 lines, three distinct concerns (one-time setup,
-   buffer helpers, the test itself). Doing it now means refactoring code that is
-   known to work.
-2. **First compute shader: grayscale.** The recording above barely changes — a
-   `vkCmdDispatch` goes between the two copies, with the barrier before it
-   becoming `TRANSFER_WRITE -> SHADER_READ` and a second barrier after it for
-   `SHADER_WRITE -> TRANSFER_READ`. The new work is all in the objects around the
-   dispatch: shader module, descriptor set layout, descriptor pool, descriptor
-   set, pipeline layout, compute pipeline.
+Continues in [Stage 4 — Project structure](04-project-structure.md), which splits
+`main.cpp` into a context struct and buffer helpers before the shader work
+begins.
