@@ -70,7 +70,7 @@ A `VkBufferMemoryBarrier` has two halves:
 plus `buffer` / `offset` / `size` to say which memory, and two queue-family
 fields that are **not part of the memory dependency at all**.
 
-### The bug that broke the first run
+### The queue family fields are not a memory dependency
 
 `VkBufferMemoryBarrier` does double duty: a memory dependency *and* a queue
 family ownership transfer. Which one is meant is decided by comparing
@@ -80,29 +80,12 @@ family ownership transfer. Which one is meant is decided by comparing
 - different values -> ownership transfer, which requires a **matching pair**: a
   release barrier on the source queue and an acquire barrier on the destination
 
-Only `srcQueueFamilyIndex` was set. `dstQueueFamilyIndex` kept its zero from
-`VkBufferMemoryBarrier{}` — and `0` is a real queue family, the one in use. The
-layer read it as an acquire with no release:
-
-    UNASSIGNED-VkBufferMemoryBarrier-buffer-00004
-    ... from srcQueueFamilyIndex 4294967295 to dstQueueFamilyIndex 0
-    has no matching release barrier queued for execution
-
-`4294967295` is `VK_QUEUE_FAMILY_IGNORED` (`UINT32_MAX`), which makes the
-mismatch readable straight from the message.
-
-**Third instance of the same trap.** Zero is a valid value in a field that needs
-to mean "nothing":
-
-| field | zeroed value | what it actually means |
-|---|---|---|
-| `sType` | `0` | `VK_STRUCTURE_TYPE_APPLICATION_INFO` |
-| `queueCreateInfoCount` | `0` | a device with no queues |
-| `dstQueueFamilyIndex` | `0` | queue family 0 — a real family |
-
-This is also why Vulkan spells "no family" as `VK_QUEUE_FAMILY_IGNORED =
-UINT32_MAX` instead of `0` — the same reasoning that made `computeFamily` use
-`UINT32_MAX` as its own sentinel back in stage 1.
+Both fields must therefore be set explicitly. Zero-initialising the struct leaves
+`dstQueueFamilyIndex` at `0`, which is a real queue family, so the barrier is
+read as an acquire with no matching release. This is why Vulkan spells "no
+family" as `VK_QUEUE_FAMILY_IGNORED = UINT32_MAX` rather than `0`, the same
+reasoning behind using `UINT32_MAX` as the sentinel when searching for a compute
+queue family in stage 1.
 
 ### Synchronisation validation is off by default
 
@@ -170,14 +153,13 @@ values compared.
 
 ## Tooling note
 
-`CMakeLists.txt` does not enable warnings. Adding
+Warnings are enabled for the target:
 
     target_compile_options(vpv PRIVATE -Wall -Wextra)
 
-would have caught two things in this project unaided: the `VkDeviceQueueCreateInfo`
-that was filled but never linked into `VkDeviceCreateInfo`, and the `success` flag
-that was computed but never printed, which made a passing run produce no output at
-all.
+`-Wunused-but-set-variable` is a useful signal in Vulkan code specifically: a
+create-info struct that is filled in but never linked into its parent produces
+exactly that warning.
 
 ## Next
 

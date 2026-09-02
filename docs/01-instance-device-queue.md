@@ -122,7 +122,7 @@ Explicit layers like this one must be requested. Implicit ones (on this laptop,
 whether asked for or not.
 
 **Verifying the layer is actually live.** Silence is ambiguous: it means either
-"no mistakes" or "layer not running". Prove it by breaking something on purpose.
+"nothing to report" or "layer not running". Prove it by breaking something on purpose.
 A test that works: pass a queue index of `5` to `vkGetDeviceQueue` when only one
 queue was requested, which produces
 `VUID-vkGetDeviceQueue-queueIndex-00385`. A test that does *not* work: removing
@@ -142,28 +142,6 @@ Reverse of creation, children before parents:
 the first two were never created, and the third goes away with its pool. This
 list grows with every stage, and keeping it an exact mirror of the creation
 order is the whole discipline.
-
-## Things that bit, or nearly did
-
-- **Index 0 is a valid queue family**, so `0` cannot double as "not found".
-  Sentinel is `UINT32_MAX` (`std::optional` would also work).
-- **`queueFlags` is a bitfield, not a value.** A universal family reports `31`
-  = graphics | compute | transfer | sparse | protected. Test with `&`, never
-  `==`: `31 == VK_QUEUE_COMPUTE_BIT` is false even though that family does
-  support compute.
-- **A `break` in a loop that also prints** kills the diagnostic output along
-  with the search. Guarding the assignment with `if (found == UINT32_MAX && ...)`
-  keeps "first match wins" while letting the loop finish printing every family.
-- **A layer is a string, not a handle.** `VkLayer` does not exist. If something
-  is not returned by a `vkCreate*` or `vkGet*` call, it is not a handle.
-- **A zeroed create-info still compiles and still runs.** `VkDeviceCreateInfo{}`
-  with no fields set has `sType == 0`, which happens to be
-  `VK_STRUCTURE_TYPE_APPLICATION_INFO`, and `queueCreateInfoCount == 0` creates a
-  device with no queues. Nothing warns about either. The only accidental safety
-  net was `-Wunused-but-set-variable` firing on the queue-create-info that had
-  not yet been linked into the device-create-info — and that net disappears the
-  moment the structs reference each other. This is why validation layers went in
-  before command buffers rather than later.
 
 ## Device selection across the two machines
 

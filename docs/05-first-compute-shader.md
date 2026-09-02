@@ -194,26 +194,6 @@ the repo root: without it the editor flags `SHADER_DIR` as undefined even though
 the compiler is perfectly happy, because clangd has no idea what flags CMake
 passes.
 
-## Things that bit
-
-- **A filled struct that is never handed to Vulkan.** Both
-  `VkWriteDescriptorSet`s were correct, but `vkUpdateDescriptorSets` was never
-  called. Two tools said so independently: `-Wall` with
-  *"variable set but not used"*, and the validation layer at dispatch time with
-  *"the descriptor (binding 0) ... has never been updated via
-  vkUpdateDescriptorSets()"*. Same shape as the `VkDeviceQueueCreateInfo` that was
-  not linked into `VkDeviceCreateInfo` back in stage 1.
-- **`== VK_SUCCESS` where `!=` was meant.** This compiles and throws on *success*,
-  with an error message claiming the creation failed. The message would have lied.
-- **A `vkCreate*` without its `vkDestroy*`.** Third occurrence (`deviceOut`, then
-  the descriptor pool and layout). The habit that fixes it: write the destroy line
-  immediately after the create line, before moving on.
-- **Reading a mapped pointer after `vkUnmapMemory`.** The pointer from
-  `vkMapMemory` is valid only until the unmap. Map, use, unmap — never keep it.
-- **A missing `}` after a one-line `throw`.** The compiler reports it at the *end
-  of the file* (`expected '}' at end of input`), pointing at `int main()`, not at
-  the real line. Tracking brace depth per line finds it immediately.
-
 ## Next
 
 1. **Extract the pipeline structure.** Now that one filter works, what varies

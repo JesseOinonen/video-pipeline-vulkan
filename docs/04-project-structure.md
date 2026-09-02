@@ -132,29 +132,14 @@ Forgetting a `.cpp` in `add_executable` produces a **linker** error
 (`undefined reference to createBuffer`), not a compile error. Worth recognising:
 the cause is the build configuration, not the code.
 
-## Three C++ mistakes worth remembering
-
-1. **`struct` and `class` definitions end with `};`.** A bare `}` closes the
-   struct early, and everything after it lands at namespace scope, producing
-   errors that point at the wrong problem — `operator=` "must be a non-static
-   member function", for instance.
-2. **Member function bodies need the `VulkanContext::` prefix** in the `.cpp`.
-   Without it you define an unrelated free function and get a linker error about
-   the missing member.
-3. **`= default`** for the default constructor once any other constructor is
-   declared.
-
-None of these are Vulkan. All three cost time in this stage.
-
 ## Verification
 
 The only correct test for a refactor is unchanged behaviour: same output, byte
-for byte, plus zero warnings once `-Wall -Wextra` was finally switched on.
+for byte, and no warnings under `-Wall -Wextra`.
 
-`-Wall -Wextra` had been off for the whole project until now. It would have
-caught two earlier bugs unaided — the `VkDeviceQueueCreateInfo` that was filled
-but never linked into `VkDeviceCreateInfo`, and the `success` flag that was
-computed but never printed.
+`-Wunused-but-set-variable` is worth calling out as a Vulkan-specific signal: a
+create-info struct that is filled in but never linked into its parent, or a
+result flag computed but never read, both surface as that warning.
 
 ## What was deliberately not done
 
