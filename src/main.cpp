@@ -55,7 +55,7 @@ void createBuffer(VkDevice device,
     if (vkAllocateMemory(device, &memAllocInfo, nullptr, &memory) != VK_SUCCESS) {throw std::runtime_error("Failed to allocate buffer memory");}
 
     // tie them together
-    vkBindBufferMemory(device, buffer, memory, 0);
+    if (vkBindBufferMemory(device, buffer, memory, 0) != VK_SUCCESS) {throw std::runtime_error("Failed to bind buffer memory");}
 }
 
 int main() {
@@ -194,7 +194,7 @@ int main() {
 
     if (vkAllocateCommandBuffers(device, &cmdAllocInfo, &commandBuffer) != VK_SUCCESS) {throw std::runtime_error("Failed to allocate command buffer");}
 
-    ////////////////////////
+    //////////////////////////
     // Buffers an memory
 
     // Fetch the whole memory map
@@ -260,7 +260,7 @@ int main() {
                  stagingOut, stagingOutMemory);
 
     void* data = nullptr;
-    vkMapMemory(device, stagingInMemory, 0, bufferSize, 0, &data);
+    if(vkMapMemory(device, stagingInMemory, 0, bufferSize, 0, &data) != VK_SUCCESS) {throw std::runtime_error("Failed to map memory");}
     uint16_t* pixels = static_cast<uint16_t*>(data);
     for (size_t i = 0; i < 1280 * 720; i++) {
         pixels[i] = static_cast<uint16_t>(i & 0xFFFF);
@@ -268,9 +268,85 @@ int main() {
     vkUnmapMemory(device, stagingInMemory);
     std::cout << "Filled stagingIn with a test pattern.\n";
 
+    ////////////////////////
+    // Begin recording
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {throw std::runtime_error("Failed to begin command buffer");}
+
+    // First copy from stagingIn to deviceBuffer
+    VkBufferCopy copyRegion{};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = bufferSize;
+
+    vkCmdCopyBuffer(commandBuffer, stagingIn, deviceBuffer, 1, &copyRegion);
+
+    // BARRIER
+    VkBufferMemoryBarrier bufferBarrier{};
+    bufferBarrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    bufferBarrier.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
+    bufferBarrier.dstAccessMask       = VK_ACCESS_TRANSFER_READ_BIT;
+    bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bufferBarrier.buffer              = deviceBuffer;
+    bufferBarrier.offset              = 0;
+    bufferBarrier.size                = VK_WHOLE_SIZE;
+
+    vkCmdPipelineBarrier(
+        commandBuffer,                   // commandBuffer
+        VK_PIPELINE_STAGE_TRANSFER_BIT,  // srcStageMask
+        VK_PIPELINE_STAGE_TRANSFER_BIT,  // dstStageMask
+        0,                               // dependencyFlags
+        0, nullptr,                      // memory barriers
+        1, &bufferBarrier,               // buffer memory barriers
+        0, nullptr                       // image memory barriers
+    );
+
+    // Second copy from deviceBuffer to stagingOut
+    vkCmdCopyBuffer(commandBuffer, deviceBuffer, stagingOut, 1, &copyRegion);
+
+    // Stop recording
+    if(vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {throw std::runtime_error("Failed to end command buffer");}
+
+    // Fence
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence fence = VK_NULL_HANDLE;
+    if (vkCreateFence(device, &fenceInfo, nullptr, &fence) != VK_SUCCESS) {throw std::runtime_error("Failed to create fence");}
+
+    // Submit
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    if(vkQueueSubmit(computeQueue, 1, &submitInfo, fence) != VK_SUCCESS) {throw std::runtime_error("Failed to submit queue");}
+
+    // Wait
+    if(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {throw std::runtime_error("Failed to wait for fences");}
+
+    // Check
+    if(vkMapMemory(device, stagingOutMemory, 0, bufferSize, 0, &data) != VK_SUCCESS) {throw std::runtime_error("Failed to map memory");}
+    pixels = static_cast<uint16_t*>(data);
+    bool success = true;
+    for (size_t i = 0; i < 1280 * 720; i++) {
+        if (pixels[i] != static_cast<uint16_t>(i & 0xFFFF)) {
+            std::cerr << "Mismatch at index " << i << ": expected "<< (i & 0xFFFF) << ", got " << pixels[i] << "\n";
+            success = false;
+            break;
+        }
+    }
+    vkUnmapMemory(device, stagingOutMemory);
+
+    std::cout << (success ? "Copy test PASSED: stagingIn -> deviceBuffer -> stagingOut\n"
+                          : "Copy test FAILED\n");
 
     ////////////////////////
     // Destroy/clean up
+    vkDestroyFence(device, fence, nullptr);
     vkDestroyBuffer(device, stagingOut, nullptr);
     vkFreeMemory(device, stagingOutMemory, nullptr);
     vkDestroyBuffer(device, deviceBuffer, nullptr);

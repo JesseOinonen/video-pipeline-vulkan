@@ -1,0 +1,85 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Stage 3 - record and submit" id="stage3">
+    <mxGraphModel dx="900" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Stage 3: record -&gt; submit -&gt; fence. Recording order is NOT execution order." style="text;html=1;fontSize=15;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="15" width="740" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cpuLane" value="CPU" style="text;html=1;fontSize=13;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="55" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="gpuLane" value="GPU" style="text;html=1;fontSize=13;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="450" y="55" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n1" value="&lt;b&gt;vkBeginCommandBuffer&lt;/b&gt;&lt;br&gt;ONE_TIME_SUBMIT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="85" width="320" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="&lt;b&gt;vkCmdCopyBuffer&lt;/b&gt;&lt;br&gt;stagingIn -&gt; deviceBuffer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="145" width="320" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="&lt;b&gt;vkCmdPipelineBarrier&lt;/b&gt;&lt;br&gt;src: TRANSFER / TRANSFER_WRITE must finish&lt;br&gt;dst: TRANSFER / TRANSFER_READ must wait" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="40" y="205" width="320" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;vkCmdCopyBuffer&lt;/b&gt;&lt;br&gt;deviceBuffer -&gt; stagingOut" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="320" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;vkEndCommandBuffer&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="340" width="320" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="note1" value="&lt;i&gt;All vkCmd* return void and run nothing.&lt;br&gt;So far only bytes have been written into the command buffer.&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b3b3b3;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="385" width="320" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n6" value="&lt;b&gt;vkQueueSubmit&lt;/b&gt;(computeQueue, 1, submitInfo, fence)&lt;br&gt;&lt;i&gt;returns immediately - does not block&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="450" width="320" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n7" value="&lt;b&gt;vkWaitForFences&lt;/b&gt;(..., VK_TRUE, UINT64_MAX)&lt;br&gt;&lt;i&gt;CPU blocks here. Timeout is in nanoseconds.&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="600" width="320" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="&lt;b&gt;vkMapMemory&lt;/b&gt;(stagingOut) -&gt; void*&lt;br&gt;static_cast&amp;lt;uint16_t*&amp;gt; -&gt; compare 921 600 values" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="40" y="670" width="320" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="g1" value="copy 1: stagingIn -&gt; deviceBuffer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="450" y="450" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="g2" value="&lt;b&gt;barrier honoured&lt;/b&gt;&lt;br&gt;&lt;i&gt;without it, copy 2 may start early&lt;br&gt;and read stale bytes&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="450" y="505" width="300" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="g3" value="copy 2: deviceBuffer -&gt; stagingOut" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="450" y="575" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="g4" value="&lt;b&gt;signal fence&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="450" y="630" width="300" height="35" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n1" target="n2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n2" target="n3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n3" target="n4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n4" target="n5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n5" target="n6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="work handed over" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;strokeColor=#82b366;" edge="1" parent="1" source="n6" target="g1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="g1" target="g2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="g2" target="g3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="g3" target="g4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" value="wakes the CPU" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="g4" target="n7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="n7" target="n8"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="t1" value="&lt;b&gt;The trap: VkBufferMemoryBarrier does two jobs&lt;/b&gt;&lt;br&gt;Memory dependency, &lt;b&gt;or&lt;/b&gt; queue family ownership transfer - decided by comparing the two family indices.&lt;br&gt;both VK_QUEUE_FAMILY_IGNORED = plain memory barrier&amp;nbsp; |&amp;nbsp; different values = ownership transfer, needs a matching release/acquire pair&lt;br&gt;&lt;br&gt;Setting only srcQueueFamilyIndex left dstQueueFamilyIndex at 0 from &amp;#123;&amp;#125; - and 0 is a &lt;b&gt;real&lt;/b&gt; family.&lt;br&gt;&lt;i&gt;&amp;quot;from srcQueueFamilyIndex 4294967295 to dstQueueFamilyIndex 0 has no matching release barrier&amp;quot;&lt;/i&gt;&lt;br&gt;Third time zero has been a valid-but-wrong value: sType 0 = APPLICATION_INFO, queueCreateInfoCount 0 = no queues, family 0 = a real family." style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="40" y="760" width="710" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t2" value="&lt;b&gt;Synchronisation validation is OFF by default&lt;/b&gt;&lt;br&gt;The default layer checks struct validity, not whether barriers are correct. Deleting the barrier still passes on the laptop:&lt;br&gt;one queue, 1.8 MB, nothing to overlap with. Works on the dev machine, wrong on the 3060.&lt;br&gt;&lt;br&gt;VK_LAYER_ENABLES=VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT ./build/vpv" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="40" y="920" width="710" height="105" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

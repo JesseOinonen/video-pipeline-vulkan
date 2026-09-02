@@ -1,8 +1,8 @@
 # Stage 2 — Buffers and memory
 
-Status: **partially complete.** Buffers are created, backed by memory and filled
-with a test pattern. Recording, submitting and verifying the round trip is the
-remaining piece and is described under [Next](#next).
+Status: **complete.** Buffers are created, backed by memory, filled with a test
+pattern, and the round trip through them is verified in
+[Stage 3](03-recording-and-submission.md).
 
 Implemented in `src/main.cpp`: `findMemoryType()` and `createBuffer()` above
 `main()`, and the buffer block inside it.
@@ -135,9 +135,40 @@ Buffers land on types **3, 1, 3** — staging in system memory, device buffer in
 VRAM, different heaps. The copy is therefore a real PCIe transfer, which is
 exactly what should be measured.
 
-### Iris Xe (laptop)
+### Iris Xe (laptop, dev)
 
-Not captured yet. Run the same binary there and fill this in.
+| Heap | Size | Flags | What it is |
+|---|---|---|---|
+| 0 | 11790 MiB | `DEVICE_LOCAL` | system memory, shared with the CPU |
+
+One heap, not three. Every type points at it.
+
+| Type | Heap | Flags (raw) | Decoded |
+|---|---|---|---|
+| 0 | 0 | 1 | `DEVICE_LOCAL` |
+| 1 | 0 | 7 | `DEVICE_LOCAL \| HOST_VISIBLE \| HOST_COHERENT` |
+| 2 | 0 | 15 | `DEVICE_LOCAL \| HOST_VISIBLE \| HOST_COHERENT \| HOST_CACHED` |
+| 3 | 0 | 33 | `DEVICE_LOCAL \| PROTECTED` (`VK_MEMORY_PROPERTY_PROTECTED_BIT` = 32) |
+| 4 | 0 | 1 | same flags as type 0 |
+| 5 | 0 | 7 | same flags as type 1 |
+| 6 | 0 | 15 | same flags as type 2 |
+
+Types 4-6 repeat the flags of 0-2. Whatever separates them is not visible in
+`propertyFlags`; which of them a given buffer may use is decided by the
+`memoryTypeBits` mask in its memory requirements.
+
+Buffers land on types **1, 0, 1** — and every type is `DEVICE_LOCAL`, on the one
+heap. So on this machine `stagingIn` and `deviceBuffer` are in the same physical
+memory and the "PCIe transfer" is not a transfer at all.
+
+The three-buffer structure is still the right code: it is correct here and costs
+almost nothing, and it is the only shape that measures anything real on the 3060.
+This is what "query, do not branch on vendor" buys — the same binary does the
+sensible thing on both machines because the *data* differs, not the code.
+
+`findMemoryType` answers differ accordingly: `DEVICE_LOCAL|HOST_VISIBLE` returns
+1 here and 5 on the 3060. The broken-`&` check from the verification list still
+catches a bug here too — a plain `&` would return 0 instead of 1.
 
 ## How each step was verified before moving on
 
@@ -164,20 +195,14 @@ third returns 1 instead of 5.
     vkFreeMemory(device, memory, nullptr);
 
 Six lines for three buffers, ahead of `vkDestroyCommandPool`. `main.cpp` is now
-284 lines and the hand-maintained teardown list is where the weight is landing —
+360 lines and the hand-maintained teardown list is where the weight is landing —
 that is the argument for the context struct planned after the round-trip test.
 
 ## Next
 
-1. record the round trip: `vkBeginCommandBuffer` -> `vkCmdCopyBuffer`
-   (stagingIn -> deviceBuffer) -> **pipeline barrier** -> `vkCmdCopyBuffer`
-   (deviceBuffer -> stagingOut) -> `vkEndCommandBuffer`.
-   The barrier is not optional: commands in a command buffer are only guaranteed
-   to *start* in order, so the second copy could otherwise read stale data. Note
-   that the validation layer does **not** check synchronisation by default —
-   silence does not prove the barriers are right.
-2. submit with a fence (`vkQueueSubmit` + `vkWaitForFences`) and verify the
-   bytes survived. Fence = GPU-to-CPU signal; semaphores are for GPU-to-GPU.
-3. split `main.cpp` into a context struct + helpers, once the round trip passes.
-4. first compute shader: grayscale — at that point the only change to this
-   pipeline is a `vkCmdDispatch` between the two copies.
+Continues in [Stage 3 — Recording, barriers and submission](03-recording-and-submission.md),
+which records the round trip, submits it and verifies the bytes survived.
+
+Predictions made here that stage 3 confirmed: the barrier was indeed required,
+and the validation layer indeed said nothing about synchronisation until it was
+asked to.
