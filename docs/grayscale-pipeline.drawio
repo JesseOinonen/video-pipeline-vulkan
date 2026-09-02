@@ -1,0 +1,96 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Stage 5 - compute pipeline" id="stage5">
+    <mxGraphModel dx="900" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Stage 5: the objects around one vkCmdDispatch" style="text;html=1;fontSize=15;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="15" width="700" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="sub" value="Layout = the parameter list. Set = the arguments. Pipeline = the callable thing." style="text;html=1;fontSize=12;fontStyle=2;align=left;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="38" width="700" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="src" value="&lt;b&gt;grayscale.comp&lt;/b&gt;&lt;br&gt;binding 0 = InBuf (readonly)&lt;br&gt;binding 1 = OutBuf (writeonly)&lt;br&gt;&lt;i&gt;-&amp;gt; glslangValidator -&amp;gt; .spv&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b3b3b3;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="210" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="o1" value="&lt;b&gt;VkShaderModule&lt;/b&gt;&lt;br&gt;loadShader()" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="190" width="210" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="o2" value="&lt;b&gt;VkDescriptorSetLayout&lt;/b&gt;&lt;br&gt;binding 0, 1 = STORAGE_BUFFER&lt;br&gt;&lt;i&gt;the parameter list&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="300" y="180" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="o3" value="&lt;b&gt;VkPipelineLayout&lt;/b&gt;&lt;br&gt;&lt;i&gt;the full signature&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="300" y="290" width="230" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="o4" value="&lt;b&gt;VkPipeline&lt;/b&gt; (compute)&lt;br&gt;&lt;i&gt;shader module may be destroyed&lt;br&gt;as soon as this exists&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="170" y="390" width="230" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="o5" value="&lt;b&gt;VkDescriptorPool&lt;/b&gt;&lt;br&gt;maxSets = 1&lt;br&gt;descriptorCount = 2&lt;br&gt;&lt;i&gt;two separate budgets&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="580" y="180" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="o6" value="&lt;b&gt;VkDescriptorSet&lt;/b&gt;&lt;br&gt;&lt;i&gt;allocated, not created -&lt;br&gt;freed with the pool&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="580" y="290" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="o7" value="&lt;b&gt;deviceIn&lt;/b&gt; -&amp;gt; binding 0&lt;br&gt;&lt;b&gt;deviceOut&lt;/b&gt; -&amp;gt; binding 1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="580" y="400" width="220" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e0" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="src" target="o1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1" value="bindings must match" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;dashed=1;strokeColor=#b85450;fontColor=#b85450;" edge="1" parent="1" source="src" target="o2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="o2" target="o3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="o1" target="o4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="o3" target="o4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="allocate" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="o5" target="o6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="layout" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;dashed=1;" edge="1" parent="1" source="o2" target="o6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" value="vkUpdateDescriptorSets&lt;br&gt;(CPU, immediate - not a vkCmd)" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;strokeColor=#82b366;fontColor=#82b366;" edge="1" parent="1" source="o6" target="o7"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="rectitle" value="&lt;b&gt;Recording&lt;/b&gt; - only the middle of the round trip changed" style="text;html=1;fontSize=13;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="700" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="r1" value="vkCmdCopyBuffer&lt;br&gt;stagingIn -&amp;gt; deviceIn" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="45" y="535" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" value="&lt;b&gt;barrier&lt;/b&gt; deviceIn&lt;br&gt;TRANSFER_WRITE&lt;br&gt;-&amp;gt; SHADER_READ" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="197" y="535" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" value="bind pipeline&lt;br&gt;bind descriptor set&lt;br&gt;&lt;b&gt;vkCmdDispatch(7200)&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="349" y="535" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" value="&lt;b&gt;barrier&lt;/b&gt; deviceOut&lt;br&gt;SHADER_WRITE&lt;br&gt;-&amp;gt; TRANSFER_READ" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="501" y="535" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r5" value="vkCmdCopyBuffer&lt;br&gt;deviceOut -&amp;gt; stagingOut" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="653" y="535" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="re1" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="r1" target="r2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="re2" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="r2" target="r3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="re3" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="r3" target="r4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="re4" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" edge="1" parent="1" source="r4" target="r5"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="n1" value="&lt;b&gt;A barrier answers two questions:&lt;/b&gt; who wrote before me and at which stage, who reads after me and at which stage.&lt;br&gt;Barrier 1 says &amp;quot;the copy is done, the shader may read&amp;quot;. Barrier 2 says &amp;quot;the shader is done, the copy may read&amp;quot;.&lt;br&gt;&lt;br&gt;vkCmdDispatch takes &lt;b&gt;workgroups&lt;/b&gt;, not invocations: (460800 + 63) / 64 = 7200. The rounding up is why the shader needs its bounds check." style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="45" y="635" width="748" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n2" value="&lt;b&gt;Packing: one uint = two RGB565 pixels&lt;/b&gt;&lt;br&gt;The filter is memory-bound (~1 integer op per byte), so only memory transaction efficiency matters. Packed, each invocation issues&lt;br&gt;one aligned 32-bit load and gets two pixels: 460 800 loads instead of 921 600. Widening to 32 bits per pixel on the host would double&lt;br&gt;both PCIe and device memory traffic - a 2x loss on the only cost that counts.&lt;br&gt;&lt;br&gt;It changes no data: rgb565data.hex is read unmodified, two pixels simply share a word. On a little-endian host the &lt;b&gt;even&lt;/b&gt; pixel is in&lt;br&gt;the low half - getting that backwards fails on every second pixel, which is why the check counts mismatches instead of stopping at the first." style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="45" y="745" width="748" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n3" value="&lt;b&gt;Verified two ways&lt;/b&gt;&lt;br&gt;A golden comparison alone tests file loading, shader arithmetic and output format at once, so a failure would not say which.&lt;br&gt;Keeping a CPU reference splits it: ref passes + golden fails = loading or format; both fail = shader or descriptor wiring.&lt;br&gt;&lt;br&gt;Result: 0 mismatches against both, over all 921 600 pixels." style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f5f5f5;strokeColor=#b3b3b3;" vertex="1" parent="1">
+          <mxGeometry x="45" y="895" width="748" height="105" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

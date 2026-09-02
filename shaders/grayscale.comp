@@ -1,0 +1,55 @@
+#version 450
+
+// One workgroup = 64 invocations. The "_id = 0" part also exposes this as
+// specialization constant 0, so the host can override it at pipeline creation
+// time without recompiling this file.
+layout(local_size_x_id = 0, local_size_x = 64) in;
+
+// Two storage buffers. std430 = tightly packed array layout (std140 would pad
+// every element to 16 bytes). The binding numbers are a contract with the
+// descriptor set layout on the C++ side.
+// One uint = two RGB565 pixels, so data.length() is 460800, not 921600.
+layout(std430, binding = 0) readonly  buffer InBuf  { uint data []; } inBuf;
+layout(std430, binding = 1) writeonly buffer OutBuf { uint data []; } outBuf;
+
+// RGB565 -> 8-bit grayscale, matching rtl/gray.vhdl and gray_golden.py exactly.
+// Integer only: floats here would produce scattered off-by-one mismatches.
+uint toGray(uint px) {
+    // Split the 16-bit pixel into its three fields.
+    uint r5 = (px >> 11) & 0x1Fu;   // bits 15..11, 5 bits
+    uint g6 = (px >>  5) & 0x3Fu;   // bits 10..5,  6 bits
+    uint b5 =  px        & 0x1Fu;   // bits  4..0,  5 bits
+
+    // Expand to 8 bits by replicating the most significant bits.
+    uint r8 = (r5 << 3) | (r5 >> 2);
+    uint g8 = (g6 << 2) | (g6 >> 4);
+    uint b8 = (b5 << 3) | (b5 >> 2);
+
+    // 0.299 / 0.587 / 0.114 scaled by 256. The weights sum to exactly 256,
+    // so the result is always <= 255 and needs no clamping.
+    return (77u * r8 + 150u * g8 + 29u * b8) >> 8;
+}
+
+void main() {
+    // Which element of the array does this invocation own?
+    uint idx = gl_GlobalInvocationID.x;
+
+    // vkCmdDispatch launches whole workgroups, so the invocation count is
+    // always a multiple of local_size_x and can overshoot the array.
+    if (idx >= inBuf.data.length()) {
+        return;
+    }
+
+    uint packed = inBuf.data[idx];
+
+    // Little-endian host: the even pixel (2*idx) sits in the low half.
+    uint p0 = packed & 0xFFFFu;
+    uint p1 = (packed >> 16) & 0xFFFFu;
+
+    uint g0 = toGray(p0);
+    uint g1 = toGray(p1);
+
+    // Output is 16 bits per pixel with the value in the low byte (0x00XX),
+    // which is the format gray_golden.hex uses.
+    outBuf.data[idx] = (g1 << 16) | g0;
+}

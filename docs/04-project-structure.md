@@ -164,13 +164,4 @@ API this project exists to learn. Revisit only if the list becomes unwieldy.
 
 ## Next
 
-Stage 5: the first compute shader (grayscale). Six new objects around the
-dispatch — shader module, descriptor set layout, descriptor pool, descriptor set,
-pipeline layout, compute pipeline — while the recording itself barely changes: a
-`vkCmdDispatch` between the two copies, with the barriers becoming
-`TRANSFER_WRITE -> SHADER_READ` and `SHADER_WRITE -> TRANSFER_READ`.
-
-First, though, a design decision: RGB565 is 16 bits and GLSL's natural
-storage-buffer element is 32. Either pack two pixels per `uint` and unpack in the
-shader with bit operations, or widen on the host side. The choice carries all the
-way to Sobel and Gaussian.
+Continues in [Stage 5 — First compute shader](05-first-compute-shader.md).

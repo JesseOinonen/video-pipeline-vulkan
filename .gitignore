@@ -1,2 +1,4 @@
 build/
 data/*.hex
+*.spv
+compile_commands.json
