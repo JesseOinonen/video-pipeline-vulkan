@@ -8,6 +8,8 @@
 
 int main() {
 
+    //////////////////////////
+    // Vulkan context
     VulkanContext ctx;
     ctx.init();
 
@@ -104,7 +106,7 @@ int main() {
     bufferBarrier.size                = VK_WHOLE_SIZE;
 
     vkCmdPipelineBarrier(
-        ctx.commandBuffer,                   // ctx.commandBuffer
+        ctx.commandBuffer,               // ctx.commandBuffer
         VK_PIPELINE_STAGE_TRANSFER_BIT,  // srcStageMask
         VK_PIPELINE_STAGE_TRANSFER_BIT,  // dstStageMask
         0,                               // dependencyFlags
