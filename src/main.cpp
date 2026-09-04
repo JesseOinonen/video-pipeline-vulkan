@@ -99,118 +99,10 @@ int main() {
     if (golden.size() != input.size()) {throw std::runtime_error("Golden size does not match input");}
 
     ////////////////////////
-    // Load shaders
-    VkShaderModule shader = loadShader(ctx.device, SHADER_DIR "/grayscale.spv");
-
-
-    ////////////////////////
-    // Descriptor set layout
-    VkDescriptorSetLayoutBinding  setLayoutBinding0{};
-    setLayoutBinding0.binding            = 0;
-    setLayoutBinding0.descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    setLayoutBinding0.descriptorCount    = 1;
-    setLayoutBinding0.stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    VkDescriptorSetLayoutBinding  setLayoutBinding1{};
-    setLayoutBinding1.binding            = 1;
-    setLayoutBinding1.descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    setLayoutBinding1.descriptorCount    = 1;
-    setLayoutBinding1.stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{};
-    descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptorSetLayoutCreateInfo.bindingCount = 2;
-    VkDescriptorSetLayoutBinding bindings[] = {setLayoutBinding0, setLayoutBinding1};
-    descriptorSetLayoutCreateInfo.pBindings    = bindings;
-    VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-    if(vkCreateDescriptorSetLayout(ctx.device, &descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {throw std::runtime_error("Failed to create descriptor set layout");}
-
-
-    ////////////////////////
-    // Descriptor pool
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSize.descriptorCount = 2;
-
-    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
-    descriptorPoolCreateInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descriptorPoolCreateInfo.poolSizeCount = 1;
-    descriptorPoolCreateInfo.pPoolSizes    = &poolSize;
-    descriptorPoolCreateInfo.maxSets       = 1;
-    VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-    if(vkCreateDescriptorPool(ctx.device, &descriptorPoolCreateInfo, nullptr, &descriptorPool) != VK_SUCCESS) {throw std::runtime_error("Failed to create descriptor pool");}
-
-
-    ////////////////////////
-    // Descriptor set
-    VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
-    descriptorSetAllocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    descriptorSetAllocInfo.descriptorPool     = descriptorPool;
-    descriptorSetAllocInfo.descriptorSetCount = 1;
-    descriptorSetAllocInfo.pSetLayouts        = &descriptorSetLayout;
-    VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-    vkAllocateDescriptorSets(ctx.device, &descriptorSetAllocInfo, &descriptorSet);
-
-
-    ////////////////////////
-    // Update descriptor sets
-    VkDescriptorBufferInfo bufferInfo0{};
-    bufferInfo0.buffer = deviceIn.buffer;
-    bufferInfo0.offset = 0;
-    bufferInfo0.range  = VK_WHOLE_SIZE;
-
-    VkDescriptorBufferInfo bufferInfo1{};
-    bufferInfo1.buffer = deviceOut.buffer;
-    bufferInfo1.offset = 0;
-    bufferInfo1.range  = VK_WHOLE_SIZE;
-
-    VkWriteDescriptorSet writeDescriptorSet0{};
-    writeDescriptorSet0.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet0.dstSet          = descriptorSet;
-    writeDescriptorSet0.dstBinding      = 0;
-    writeDescriptorSet0.dstArrayElement = 0;
-    writeDescriptorSet0.descriptorCount = 1;
-    writeDescriptorSet0.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeDescriptorSet0.pBufferInfo     = &bufferInfo0;
-
-    VkWriteDescriptorSet writeDescriptorSet1{};
-    writeDescriptorSet1.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet1.dstSet          = descriptorSet;
-    writeDescriptorSet1.dstBinding      = 1;
-    writeDescriptorSet1.dstArrayElement = 0;
-    writeDescriptorSet1.descriptorCount = 1;
-    writeDescriptorSet1.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeDescriptorSet1.pBufferInfo     = &bufferInfo1;
-
-    VkWriteDescriptorSet writes[] = { writeDescriptorSet0, writeDescriptorSet1 };
-    vkUpdateDescriptorSets(ctx.device, 2, writes, 0, nullptr);
-
-
-    ////////////////////////
-    // Pipeline layout
-    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
-    pipelineLayoutCreateInfo.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCreateInfo.setLayoutCount = 1;
-    pipelineLayoutCreateInfo.pSetLayouts    = &descriptorSetLayout;
-    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-    if(vkCreatePipelineLayout(ctx.device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {throw std::runtime_error("Failed to create pipeline layout");}
-
-
-    ////////////////////////
     // Compute pipeline
-    VkPipelineShaderStageCreateInfo shaderStageCreateInfo{};
-    shaderStageCreateInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStageCreateInfo.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
-    shaderStageCreateInfo.module = shader;
-    shaderStageCreateInfo.pName  = "main";
-
-    VkComputePipelineCreateInfo computePipelineCreateInfo{};
-    computePipelineCreateInfo.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    computePipelineCreateInfo.stage  = shaderStageCreateInfo;
-    computePipelineCreateInfo.layout = pipelineLayout;
-    VkPipeline pipeline = VK_NULL_HANDLE;
-    if(vkCreateComputePipelines(ctx.device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {throw std::runtime_error("Failed to create compute pipeline");}
-
+    ComputePipeline gray;
+    gray.init(ctx.device, SHADER_DIR "/grayscale.spv", 2);
+    gray.bindBuffers({ deviceIn.buffer, deviceOut.buffer });
 
     ////////////////////////
     // Begin recording
@@ -250,9 +142,9 @@ int main() {
     );
 
     // Run the shader
-    vkCmdBindPipeline(ctx.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    vkCmdBindPipeline(ctx.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, gray.pipeline);
     vkCmdBindDescriptorSets(ctx.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                            gray.pipelineLayout, 0, 1, &gray.descriptorSet, 0, nullptr);
 
     const uint32_t elementCount = static_cast<uint32_t>(bufferSize / 4);  // uints, 2 pixels each
     const uint32_t localSize    = 64;                                     // must match local_size_x
@@ -334,11 +226,6 @@ int main() {
 
     ////////////////////////
     // Destroy/clean up
-    vkDestroyPipeline(ctx.device, pipeline, nullptr);
-    vkDestroyPipelineLayout(ctx.device, pipelineLayout, nullptr);
-    vkDestroyDescriptorPool(ctx.device, descriptorPool, nullptr);
-    vkDestroyDescriptorSetLayout(ctx.device, descriptorSetLayout, nullptr);
-    vkDestroyShaderModule(ctx.device, shader, nullptr);
     vkDestroyFence(ctx.device, fence, nullptr);
     destroyBuffer(ctx.device, stagingOut);
     destroyBuffer(ctx.device, deviceOut);

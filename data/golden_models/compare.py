@@ -15,6 +15,15 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 W, H = 1280, 720
+
+# The 3x3 window modules (gaussian, sobel) output their frame one line and one
+# column late: the stream word at (y, x) carries the filtered pixel of
+# (y-1, x-1). The RTL image is rolled back by that amount here to line it up
+# with the un-shifted golden image; the wrapped bottom row / right column of the
+# rolled image are meaningless.
+LINE_DELAY = 1
+COL_DELAY  = 1
+
 ROI_X_START, ROI_X_END = 30, 560
 ROI_Y_START, ROI_Y_END = 80, 650
 ROI_W = ROI_X_END - ROI_X_START + 1  # 531
@@ -58,6 +67,8 @@ def gaussian_image(module):
     gold_img = np.array(Image.open(f"{module}/{module}_golden.png"))
 
     rtl_img = (rtl_raw & 0xFF).astype(np.uint8).reshape(H, W)
+    rtl_img = np.roll(rtl_img, -LINE_DELAY, axis=0)   # undo the one-line latency
+    rtl_img = np.roll(rtl_img, -COL_DELAY,  axis=1)   # undo the one-column latency
     return rtl_img, gold_img, "gray"
 
 def sobel_image(module):
@@ -65,6 +76,8 @@ def sobel_image(module):
     gold_img = np.array(Image.open(f"{module}/{module}_golden.png"))
 
     rtl_img = (rtl_raw & 0xFF).astype(np.uint8).reshape(H, W)
+    rtl_img = np.roll(rtl_img, -LINE_DELAY, axis=0)   # undo the one-line latency
+    rtl_img = np.roll(rtl_img, -COL_DELAY,  axis=1)   # undo the one-column latency
     return rtl_img, gold_img, "gray"
 
 handlers = {
