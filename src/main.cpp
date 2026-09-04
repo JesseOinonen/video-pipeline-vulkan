@@ -27,6 +27,14 @@ static void report(const char* name, double ms) {
               << 921600.0 / (ms * 1000.0) << " Mpx/s\n";
 }
 
+static void reportRange(const char* name, const BenchResult& r) {
+    const double spread = (r.maxMs - r.minMs) / r.medianMs * 100.0;
+    std::cout << name << ": median " << r.medianMs << " ms"
+              << ", min " << r.minMs
+              << ", max " << r.maxMs
+              << ", spread " << spread << "%\n";
+}
+
 int main() {
 
     //////////////////////////
@@ -240,6 +248,19 @@ int main() {
     report("GPU steady state", gpu.medianMs);
     report("GPU first (cold)", gpu.firstMs);
     report("CPU             ", cpuMs);
+
+    std::cout << "\n--- GPU variation ---\n";
+    reportRange("GPU steady state", gpu);
+
+    const size_t n = gpu.samples.size();
+    const size_t k = 20;
+    if (n > 2 * k) {
+        double firstK = 0.0, lastK = 0.0;
+        for (size_t i = 1; i <= k; i++)    firstK += gpu.samples[i];
+        for (size_t i = n - k; i < n; i++) lastK  += gpu.samples[i];
+        std::cout << "first " << k << " avg: " << firstK / k
+                  << " ms, last " << k << " avg: " << lastK / k << " ms\n";
+    }
 
     ////////////////////////
     // Destroy/clean up

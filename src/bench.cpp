@@ -41,8 +41,16 @@ BenchResult benchmarkCommandBuffer(VkDevice device,
         samples.push_back(std::chrono::duration<double, std::milli>(t1 - t0).count());
     }
 
+    std::vector<double> steady(samples.begin() + 1, samples.end());
+
     BenchResult result;
     result.firstMs  = samples.front();
-    result.medianMs = medianMs(std::vector<double>(samples.begin() + 1, samples.end()));
+    result.medianMs = medianMs(steady);
+
+    const auto mm = std::minmax_element(steady.begin(), steady.end());
+    result.minMs = *mm.first;
+    result.maxMs = *mm.second;
+
+    result.samples = std::move(samples);
     return result;
 }

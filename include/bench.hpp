@@ -5,8 +5,11 @@
 #include <vector>
 
 struct BenchResult {
-    double firstMs = 0.0;   // milliseconds for first run, closest to one-frame latency
+    double firstMs  = 0.0;  // milliseconds for first run, closest to one-frame latency
     double medianMs = 0.0;  // steady-state median milliseconds for subsequent runs
+    double minMs    = 0.0;
+    double maxMs    = 0.0;
+    std::vector<double> samples;
 };
 
 // Median of a sample set. Takes by value: it sorts
