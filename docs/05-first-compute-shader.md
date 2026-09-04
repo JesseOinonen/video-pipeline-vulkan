@@ -196,15 +196,5 @@ passes.
 
 ## Next
 
-1. **Extract the pipeline structure.** Now that one filter works, what varies
-   between filters is known rather than guessed: binding count, push constants,
-   whether the descriptor pool is shared. That makes a `ComputePipeline` struct a
-   design decision instead of a bet — and doing it before the second filter is
-   cheaper than after.
-2. **The next filter.** ROI is point-wise like grayscale (a crop, no neighbours).
-   Sobel and Gaussian are 3x3 convolutions and bring three genuinely new problems:
-   neighbour indexing across packed words, border handling that must match the RTL
-   exactly, and workgroup shared memory — a naive convolution reads every pixel
-   nine times.
-3. **Timing.** Timestamp queries and a steady-state loop. Worth deferring until
-   several filters exist so the measurement code is not shaped around one of them.
+Continues in
+[Stage 6 — Pipeline abstraction and the first measurements](06-pipeline-abstraction-and-benchmarking.md).

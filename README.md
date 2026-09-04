@@ -7,7 +7,7 @@ architectures**: FPGA, CPU and GPU.
 The RTL version lives in a separate repo
 ([video-pipeline](https://github.com/JesseOinonen/video-pipeline)) and is a
 streaming AXI-Stream design — ROI → grayscale → Gaussian → Sobel, one pixel per
-clock at 188 MHz. This repo is the GPU-compute port of the same filters, and the
+clock, meeting a 5.5 ns clock constraint (181.8 MHz). This repo is the GPU-compute port of the same filters, and the
 two are validated against a shared golden model so the comparison is between
 architectures rather than between implementations that happen to disagree.
 
@@ -25,9 +25,13 @@ to be resident before anything comes out).
 | Buffers, memory type selection, staging → device-local path | done |
 | Recording, pipeline barriers, submit, fence | done |
 | First compute shader: **grayscale** | done — **0 mismatches vs the golden model**, all 921 600 pixels |
+| Reusable `ComputePipeline` — adding a filter is three lines | done |
+| Benchmark harness: steady-state loop, end-to-end timing | done |
+| CPU baseline | done (single-threaded scalar) |
+| Timestamp queries (kernel-only vs end-to-end) | not started |
+| Latency measurement | not started |
 | ROI, Gaussian, Sobel | not started |
-| Benchmark harness (timestamp queries, steady-state loop) | not started |
-| CPU reference implementation | partial (`grayRef()` in `src/main.cpp`) |
+| Numbers from the RTX 3060 | not yet — everything below is from the laptop |
 
 Current output:
 
@@ -37,6 +41,25 @@ Current output:
     vs CPU reference: 0 mismatches
     vs golden model : 0 mismatches
     Grayscale PASSED
+
+### First measurements — grayscale, Intel Iris Xe (laptop)
+
+| | ms/frame | fps | Mpx/s |
+|---|---|---|---|
+| GPU steady state (end-to-end) | 2.75 | 363 | 335 |
+| GPU first iteration (cold) | 2.45 | 409 | 377 |
+| CPU, single-threaded scalar | 5.97 | 167 | 154 |
+| FPGA at 181.8 MHz (calculated) | 5.07 | 197 | 182 |
+
+Read these as a working measurement setup rather than as the comparison. Iris Xe
+has unified memory, so the GPU figure does not include a real PCIe transfer; the
+CPU leg is scalar and single-threaded, which flatters the GPU; and latency, the
+metric where the architectures differ by orders of magnitude rather than by a
+factor of two, is not measured yet.
+
+The cold iteration coming out *faster* than the steady state is itself a finding
+— most likely the laptop's integrated GPU boosting and then throttling under
+sustained load, since it shares a power budget with the CPU.
 
 ## Method
 
@@ -114,6 +137,7 @@ that way, and which parts of the API are easy to get subtly wrong.
 | [03 — Recording, barriers and submission](docs/03-recording-and-submission.md) | recording order is not execution order; barriers, fences, synchronisation validation |
 | [04 — Project structure](docs/04-project-structure.md) | splitting the code, RAII for Vulkan handles, CMake and include paths |
 | [05 — First compute shader](docs/05-first-compute-shader.md) | GLSL, SIMT and divergence, the six pipeline objects, bit-exact validation |
+| [06 — Pipeline abstraction and first measurements](docs/06-pipeline-abstraction-and-benchmarking.md) | making filters cheap to add; what the benchmark loop has to get right |
 
 Diagrams (draw.io): [init](docs/vulkan-init.drawio),
 [buffers](docs/buffer-memory.drawio),
@@ -122,11 +146,10 @@ Diagrams (draw.io): [init](docs/vulkan-init.drawio),
 
 ## Roadmap
 
-1. Extract the pipeline objects into a reusable struct now that one filter works
-   and what varies between filters is known rather than guessed
-2. Benchmark harness — timestamp queries scaled by the device's own
-   `timestampPeriod`, a steady-state loop, and a CPU baseline. Built
-   filter-agnostically so it is not shaped around grayscale
+1. Timestamp queries, scaled by the device's own `timestampPeriod`, to separate
+   kernel time from transfer time — the split that matters on a discrete GPU
+2. Latency: one round trip including the host copies, measured once rather than
+   in a loop. Time-to-first-output-pixel is where a streaming design wins
 3. ROI, Sobel, Gaussian, each validated against its own golden model
 4. Sobel from a naive implementation to a shared-memory tiled one, measured both
    ways — a naive 3x3 convolution reads every pixel nine times
@@ -141,7 +164,7 @@ Diagrams (draw.io): [init](docs/vulkan-init.drawio),
 |---|---|
 | Benchmarks | NVIDIA RTX 3060 — 6 queue families, VRAM and system memory on separate heaps, so staging copies are real PCIe transfers |
 | Development | Intel Iris Xe (TGL GT2) — one universal queue family, one unified memory heap |
-| FPGA | the RTL project, 125 MHz, 1 pixel/clock |
+| FPGA | the RTL project — 1 pixel/clock, meeting a 5.5 ns clock constraint (181.8 MHz) |
 
 Device selection prefers a discrete GPU and falls back to an integrated one, so
 the same binary runs on both. Nothing branches on vendor: the code queries device
