@@ -3,10 +3,12 @@
 #include <vector>
 #include <stdexcept>
 #include <cstring>
+#include <chrono>
 #include "vk_buffer.hpp"
 #include "vk_context.hpp"
 #include "vk_pipeline.hpp"
 #include "hex_io.hpp"
+#include "bench.hpp"
 
 // CPU reference for the shader, matching rtl/gray.vhdl and gray_golden.py.
 static uint16_t grayRef(uint16_t px) {
@@ -17,6 +19,12 @@ static uint16_t grayRef(uint16_t px) {
     uint32_t g8 = (g6 << 2) | (g6 >> 4);
     uint32_t b8 = (b5 << 3) | (b5 >> 2);
     return static_cast<uint16_t>((77u * r8 + 150u * g8 + 29u * b8) >> 8);
+}
+
+static void report(const char* name, double ms) {
+    std::cout << name << ": " << ms << " ms, "
+              << 1000.0 / ms << " fps, "
+              << 921600.0 / (ms * 1000.0) << " Mpx/s\n";
 }
 
 int main() {
@@ -108,7 +116,7 @@ int main() {
     // Begin recording
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    beginInfo.flags = 0;
 
     if (vkBeginCommandBuffer(ctx.commandBuffer, &beginInfo) != VK_SUCCESS) {throw std::runtime_error("Failed to begin command buffer");}
 
@@ -187,16 +195,8 @@ int main() {
     VkFence fence = VK_NULL_HANDLE;
     if (vkCreateFence(ctx.device, &fenceInfo, nullptr, &fence) != VK_SUCCESS) {throw std::runtime_error("Failed to create fence");}
 
-    // Submit
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &ctx.commandBuffer;
-
-    if(vkQueueSubmit(ctx.computeQueue, 1, &submitInfo, fence) != VK_SUCCESS) {throw std::runtime_error("Failed to submit queue");}
-
-    // Wait
-    if(vkWaitForFences(ctx.device, 1, &fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {throw std::runtime_error("Failed to wait for fences");}
+    // Benchmark: submit the recorded comman buffer repeatedly
+    BenchResult gpu = benchmarkCommandBuffer(ctx.device, ctx.computeQueue, ctx.commandBuffer, fence, 1000);
 
     // Check
     if(vkMapMemory(ctx.device, stagingOut.memory, 0, bufferSize, 0, &data) != VK_SUCCESS) {throw std::runtime_error("Failed to map memory");}
@@ -223,6 +223,23 @@ int main() {
     std::cout << ((refMismatches == 0 && goldenMismatches == 0)
                       ? "Grayscale PASSED\n" : "Grayscale FAILED\n");
 
+    // CPU benchmark
+    std::vector<uint16_t> cpuOut(input.size());
+    std::vector<double> cpuSamples;
+    for (int i = 0; i < 20; i++) {
+        const auto t0 = std::chrono::steady_clock::now();
+        for (size_t p = 0; p < input.size(); p++) {
+            cpuOut[p] = grayRef(input[p]);
+        }
+        const auto t1 = std::chrono::steady_clock::now();
+        cpuSamples.push_back(std::chrono::duration<double, std::milli>(t1 - t0).count());
+    }
+    const double cpuMs = medianMs(cpuSamples);
+
+    std::cout << "\n--- Timing ---\n";
+    report("GPU steady state", gpu.medianMs);
+    report("GPU first (cold)", gpu.firstMs);
+    report("CPU             ", cpuMs);
 
     ////////////////////////
     // Destroy/clean up

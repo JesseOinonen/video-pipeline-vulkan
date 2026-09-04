@@ -37,6 +37,7 @@ add_executable(vpv
     src/vk_context.cpp
     src/vk_pipeline.cpp
     src/hex_io.cpp
+    src/bench.cpp
 )
 
 add_dependencies(vpv shaders)
